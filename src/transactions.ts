@@ -27,9 +27,13 @@ export function createIntermediateTransaction(
         networkPassphrase: StellarSdk.Networks.TESTNET,
         fee: 1000,
         memo: new StellarSdk.Memo(StellarSdk.MemoID, position.toString())
-    });
-
-    builder.addOperation(StellarSdk.Operation.accountMerge({
+    })
+    .addOperation(StellarSdk.Operation.createAccount({
+        source: board.escrow[round - 1].id,
+        destination: board.escrow[round].id,
+        startingBalance: '1'
+    }))
+    .addOperation(StellarSdk.Operation.accountMerge({
         source: board.escrow[round - 1].id,
         destination: board.escrow[round].id,
     }));
@@ -44,13 +48,13 @@ export function createIntermediateTransaction(
         }))
     });
 
-    builder.addOperation(StellarSdk.Operation.setOptions({
+    const tx = builder.addOperation(StellarSdk.Operation.setOptions({
         source: board.escrow[round].id,
         masterWeight: 0
-    }));
+    }))
+    .setTimeout(0)
+    .build();
 
-    builder.setTimeout(0);
-    const tx = builder.build();
     return [tx, tx.hash()];
 }
 
@@ -68,20 +72,24 @@ export function createTieTransaction(
             player.sequence.plus(round >> 1).toString()
         );
 
-        const tx = new StellarSdk.TransactionBuilder(account, {
+        const builder = new StellarSdk.TransactionBuilder(account, {
             networkPassphrase: StellarSdk.Networks.TESTNET,
             fee: 1000,
             memo: new StellarSdk.Memo(StellarSdk.MemoID, position.toString())
-        })
-        .addOperation(StellarSdk.Operation.payment({
+        });
+
+       if (board.bet !== 0) {
+            builder.addOperation(StellarSdk.Operation.payment({
+                source: board.escrow[round - 1].id,
+                destination: board.players[1].id,
+                amount: board.bet.toString(),
+                asset: StellarSdk.Asset.native()
+            }));
+        }
+
+        const tx = builder.addOperation(StellarSdk.Operation.accountMerge({
             source: board.escrow[round - 1].id,
             destination: board.players[0].id,
-            amount: '100',
-            asset: StellarSdk.Asset.native()
-        }))
-        .addOperation(StellarSdk.Operation.accountMerge({
-            source: board.escrow[round - 1].id,
-            destination: board.players[1].id,
         }))
         .setTimeout(0)
         .build();
@@ -106,14 +114,28 @@ export function createWinTransaction(
             player.sequence.plus(round >> 1).toString()
         );
 
-        const tx = new StellarSdk.TransactionBuilder(account, {
+        const builder = new StellarSdk.TransactionBuilder(account, {
             networkPassphrase: StellarSdk.Networks.TESTNET,
             fee: 1000,
             memo: new StellarSdk.Memo(StellarSdk.MemoID, position.toString())
-        })
+        });
+
+        //  if we're betting, and player #1 wins, send winnings explicitly
+        //  (if player #0 wins, the merge will do it for us)
+
+        if ((board.bet !== 0) && (playerId === 1)) {
+            builder.addOperation(StellarSdk.Operation.payment({
+                source: board.escrow[round - 1].id,
+                destination: player.id,
+                amount: (board.bet * 2).toString(),
+                asset: StellarSdk.Asset.native()
+            }));
+        }
+
+        const tx = builder
         .addOperation(StellarSdk.Operation.accountMerge({
             source: board.escrow[round - 1].id,
-            destination: player.id
+            destination: board.players[0].id
         }))
         .setTimeout(0)
         .build();
@@ -141,11 +163,20 @@ export function createSetupTransaction(
         fee: 1000
     });
 
-    for (let level = 0; level < 10; level++) {
-        builder.addOperation(StellarSdk.Operation.createAccount({
-            destination: board.escrow[level].id,
-            startingBalance: '2'
-        }));
+    builder.addOperation(StellarSdk.Operation.createAccount({
+        destination: board.escrow[0].id,
+        startingBalance: '6'            //  1 + 9*0.5 + some spare change
+    }));
+
+    if (board.bet !== 0) {
+        for (const player of board.players) {
+            builder.addOperation(StellarSdk.Operation.payment({
+                source: player.id,
+                destination: board.escrow[0].id,
+                amount: board.bet.toString(),
+                asset: StellarSdk.Asset.native()
+            }));
+        }
     }
 
     preAuth.forEach(tx => {

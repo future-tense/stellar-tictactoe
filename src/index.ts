@@ -12,6 +12,7 @@ import {
 export interface Board {
     positions: number[];
     available: number;
+    bet: number;
     players: Account[];
     escrow: {id: string, keys: StellarSdk.Keypair}[];
     tieTransaction(level: number, position: number): [StellarSdk.Transaction, Buffer];
@@ -28,15 +29,18 @@ const NUM_GAMES = 255168;
 /**
  *
  * @param players -
+ * @param bet -
  * @public
  */
 export function setup(
-    players: StellarSdk.AccountResponse[]
+    players: StellarSdk.AccountResponse[],
+    bet: number = 0
 ): [Board, StellarSdk.Transaction] {
 
     const board: Partial<Board> = {
         positions: [0, 0],
         available: 511,
+        bet: bet,
         players: players.map((player) => ({
             id: player.id,
             sequence: new BigNumber(player.sequenceNumber())
