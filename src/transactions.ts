@@ -165,7 +165,7 @@ export function createSetupTransaction(
 
     builder.addOperation(StellarSdk.Operation.createAccount({
         destination: board.escrow[0].id,
-        startingBalance: '6'            //  1 + 9*0.5 + some spare change
+        startingBalance: '7'            //  1 + 9*0.5 + 1 + some spare change
     }));
 
     if (board.bet !== 0) {
