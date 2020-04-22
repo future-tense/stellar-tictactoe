@@ -109,12 +109,8 @@ function isWinningBoard(board: number): boolean {
 function sourceAccounts(
     tx: StellarSdk.Transaction
 ): Set<string> {
-    const res: Set<string> = new Set();
-    for (const op of tx.operations) {
-        res.add(op.source as string);
-    }
-
-    return res;
+    // @ts-ignore (we might get undefined as part of the set, which is fine)
+    return new Set(tx.operations.map(op => op.source));
 }
 
 const cache: {[key: number]: [number, StellarSdk.Transaction, Buffer]} = {}
