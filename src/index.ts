@@ -83,7 +83,9 @@ export function move(
     position: number
 ): StellarSdk.Transaction {
     const [_, tx, hash] = _move(board, round, position);
-    tx.sign(board.escrow[round].keys);
+    if (sourceAccounts(tx).has(board.escrow[round].id)) {
+        tx.sign(board.escrow[round].keys);
+    }
 
     const playerId = round & 1;
     board.positions[playerId] ^= 1 << position;
@@ -102,6 +104,17 @@ function isWinningBoard(board: number): boolean {
         ((board & 292) === 292) ||
         ((board & 448) === 448)
      );
+}
+
+function sourceAccounts(
+    tx: StellarSdk.Transaction
+): Set<string> {
+    const res: Set<string> = new Set();
+    for (const op of tx.operations) {
+        res.add(op.source as string);
+    }
+
+    return res;
 }
 
 const cache: {[key: number]: [number, StellarSdk.Transaction, Buffer]} = {}
