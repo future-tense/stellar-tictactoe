@@ -64,6 +64,8 @@ export function setup(
     }
 
     const tx = createSetupTransaction(board as Board, txs);
+    tx.sign(board.escrow[0].keys);
+
     return [board as Board, tx];
 }
 
@@ -80,6 +82,8 @@ export function move(
     position: number
 ): StellarSdk.Transaction {
     const [_, tx, hash] = _move(board, round, position);
+    tx.sign(board.escrow[round].keys);
+
     const playerId = round & 1;
     board.positions[playerId] ^= 1 << position;
     board.available ^= 1 << position;
