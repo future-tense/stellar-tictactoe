@@ -37,13 +37,10 @@ export function setup(
     const board: Partial<Board> = {
         positions: [0, 0],
         available: 511,
-        players: [{
-            id: players[0].id,
-            sequence: new BigNumber(players[0].sequenceNumber())
-        },{
-            id: players[1].id,
-            sequence: new BigNumber(players[1].sequenceNumber())
-        }]
+        players: players.map((player) => ({
+            id: player.id,
+            sequence: new BigNumber(player.sequenceNumber())
+        }))
     };
 
     board.escrow = [];
